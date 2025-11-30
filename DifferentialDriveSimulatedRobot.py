@@ -178,8 +178,6 @@ class DifferentialDriveSimulatedRobot(SimulatedRobot):
             R_yaw = self.v_yaw_std ** 2
             return yaw, R_yaw
 
-        pass
-
     def ReadXYFeature(self):
         if self.k % self.xy_feature_reading_frequency != 0:
             return [], []
