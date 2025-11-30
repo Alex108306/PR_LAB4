@@ -72,11 +72,16 @@ class EKF(GaussianFilter):
         self.xk_1 = xk_1 if xk_1 is not None else self.xk_1
         self.Pk_1 = Pk_1 if Pk_1 is not None else self.Pk_1
 
-        self.uk = uk;
+        self.uk = uk
         self.Qk = Qk  # store the input and noise covariance for logging
 
         # KF equations begin here
         # TODO: To be implemented by the student
+        self.xk_bar = self.f(self.xk_1, uk)
+        Ak = self.Jfx(self.xk_1)
+        Wk = self.Jfw(self.xk_1)
+
+        self.Pk_bar = Ak @ self.Pk_1 @ Ak.T + Wk @ self.Qk @ Wk.T
 
         return self.xk_bar, self.Pk_bar
 
@@ -95,12 +100,16 @@ class EKF(GaussianFilter):
         # logging for plotting
         self.xk_bar = xk_bar
         self.Pk_bar = Pk_bar
-        self.zk = zk;
-        self.nz = zk.shape[0];  # store dimensionality of the observation
-        self.Rk = Rk  # store the observation and noise covariance for logging
-
+        self.zk = zk
+        self.nz = zk.shape[0]  # store dimensionality of the observation
+        self.Rk = Rk
         # KF equations begin here
 
         # TODO: To be implemented by the student
+        I = np.eye(self.Pk_bar.shape[0])
+        Kk = self.Pk_bar @ Hk.T @ np.linalg.inv(Hk @ self.Pk_bar @ Hk.T + Vk @ self.Rk @ Vk.T)
+        self.xk = xk_bar + Kk @ (self.zk - self.h(xk_bar))
+        self.Pk = (I - Kk @ Hk) @ Pk_bar #@ (I - Kk @ Hk).T
+        
 
         return self.xk, self.Pk

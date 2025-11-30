@@ -38,7 +38,7 @@ class KF(GaussianFilter):
         self.xk_1 = xk_1 if xk_1 is not None else self.xk_1
         self.Pk_1 = Pk_1 if Pk_1 is not None else self.Pk_1
 
-        self.uk = uk;
+        self.uk = uk
         self.Qk = Qk  # store the input and noise covariance for logging
 
         # KF equations begin here
@@ -60,7 +60,7 @@ class KF(GaussianFilter):
         # logging for plotting
         self.xk_bar = xk_bar if xk_bar is not None else self.xk_bar
         self.Pk_bar = Pk_bar if Pk_bar is not None else self.Pk_bar
-        self.zk = zk;
+        self.zk = zk
         self.Rk = Rk  # store the observation and noise covariance for logging
 
         # KF equations begin here

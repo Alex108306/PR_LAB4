@@ -129,8 +129,10 @@ class CartesianFeature(Feature,np.ndarray):
         """
 
         # TODO: To be completed by the student
+        F = np.array([[1, 0, 0], [0, 1, 0]])
+        NxF = F @ (NxB.oplus(F.T @ BxF))
 
-        return NxF
+        return CartesianFeature(NxF)
 
     def J_1boxplus(BxF, NxB):
         """
@@ -145,7 +147,8 @@ class CartesianFeature(Feature,np.ndarray):
         :return: Jacobian matrix :math:`J_{1\\boxplus}` (eq. :eq:`eq-J1boxplus2DCartesian`) (eq. :eq:`eq-J1boxplus2DCartesian`)
         """
 
-        # TODO: To be completed by the student
+        F = np.array([[1, 0, 0], [0, 1, 0]])
+        J = F @ NxB.J_1oplus(F.T @ BxF)
 
         return J
 
@@ -162,7 +165,8 @@ class CartesianFeature(Feature,np.ndarray):
         :return: Jacobian matrix :math:`J_{1\\boxplus}` (eq. :eq:`eq-J2boxplus2DCartesian`)
         """
 
-        # TODO: To be completed by the student
+        F = np.array([[1, 0, 0], [0, 1, 0]])
+        J = F @ NxB.J_2oplus() @ F.T
 
         return J
 
@@ -194,7 +198,7 @@ if __name__ == '__main__':
     print("J_1boxplus=", BxF.J_1boxplus(NxB3dof))
     print("J_2boxplus=", BxF.J_2boxplus(NxB3dof))
 
-    NxB4dof=Pose4D(np.array([[5,5,5,np.pi/2]]).T)
+    NxB4dof=Pose3D(np.array([[5,5,np.pi/2]]).T)
 
     NxF = BxF.boxplus(NxB4dof)
 

@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.linalg import block_diag
 from Feature import *
 
 class MapFeature:
@@ -53,7 +54,7 @@ class MapFeature:
         """
         # TODO: To be implemented by the student
 
-        return Observation_representation
+        return v
 
     def o2s(self, v):
         """
@@ -65,7 +66,7 @@ class MapFeature:
         :return: vector in the storage representation
         """
         # TODO: To be implemented by the student
-        return Storage_representation
+        return v
 
     def J_s2o(self, v):
         """
@@ -76,7 +77,7 @@ class MapFeature:
         :param v: vector in the storage representation
         :return: Jacobian of the conversion function from the storage representation to the observation representation
         """
-        # TODO: To be implemented by the student
+        J = np.eye(len(v))
 
         return J
 
@@ -89,7 +90,8 @@ class MapFeature:
         :param v: vector in the observation representation
         :return: Jacobian of the conversion function from the observation representation to the storage representation
         """
-        # TODO: To be implemented by the student
+        
+        J = np.eye(len(v))
         return J
 
     def hf(self, xk):  # Observation function for al zf observations
@@ -124,8 +126,18 @@ class MapFeature:
         :return: vector of expected features observations corresponding to the vector of observed features :math:`z_f`.
         """
         # TODO: To be implemented by the student
+        hf = []
+        for i in range(len(self.H)):
+            Fj = self.H[i]
+            if Fj is not None:
+                hf.append(self.hfj(xk, Fj))
+        
+        if len(hf) == 0:
+            return []
 
-        return _hf
+        hf = np.vstack(hf)
+
+        return hf
 
     def Jhfx(self, xk):  # Jacobian wrt x of the feature observation function for all zf observations
         """
@@ -145,10 +157,15 @@ class MapFeature:
         """
 
         # TODO: To be implemented by the student
-
+        J=[]
+        for i in range(0, self.nf):
+            Fj = self.H[i]
+            J.append(self.Jhfjx(xk, Fj))
+        
+        J = np.vstack(J)
         return J
 
-    def Jhfv(self, xk):  # Jacobian wrt v of the observation function for a feature
+    def Jhfv(self):  # Jacobian wrt v of the observation function for a feature
         """
         Computes the Jacobian of the observation function :meth:`hf` (eq. :eq:`eq-hf`) with respect to the observation noise :math:`v_k`.
         Normally, the observation noise in the observation B-Frame is linear (see eq. :eq:`eq-hf-element-wise`) so the Jacobian is the identity matrix.
@@ -170,7 +187,7 @@ class MapFeature:
         :param xk: state vector mean :math:`\\hat x_k`.
         :return: Jacobian of the observation function :meth:`hf` with respect ro the observation noise :math:`v_k` :math:`J_{hfv}=I_{n_{zf}\\times n_{zf}}`
         """
-        # TODO: To be implemented by the student
+        J = np.eye(self.zfi_dim)
         return J
 
     def hfj(self, xk_bar, Fj):  # Observation function for zf_i and x_Fj
@@ -198,7 +215,8 @@ class MapFeature:
         # h(xk_bar,vk)=(-) xk_bar) [+] x_Fj + vk
 
         # TODO: To be implemented by the student
-        return _hfj
+        hfj = self.s2o((self.M[Fj])).boxplus(xk_bar.ominus())
+        return hfj
 
     def Jhfjx(self, xk, Fj):  # Jacobian wrt x of the observation function for feature observation i
         """
@@ -220,6 +238,7 @@ class MapFeature:
         """
         # J_hfjx = J_s2o @ J_1[+] * J_(-)
         # TODO: To be implemented by the student
+        J = self.J_s2o((self.M[Fj]).boxplus(xk.ominus())) @ ((self.M[Fj]).J_1boxplus(xk.ominus())) @ xk.J_ominus()
         return J
 
     def g(self, xk, BxFj):  # xBp [+] (BxFj + vk)
@@ -242,6 +261,7 @@ class MapFeature:
         """
 
         # TODO: To be implemented by the student
+        NxFj = (self.o2s(BxFj)).boxplus(xk)
         return NxFj
 
     def Jgx(self, xk, BxFj):  # Jacobian wrt xk of the inverse sensor model for a single feature observation
@@ -262,6 +282,7 @@ class MapFeature:
         """
 
         # TODO: To be implemented by the student
+        J = self.o2s(BxFj).J_1boxplus(xk)
         return J
 
     def Jgv(self, xk, BxFj):
@@ -278,6 +299,7 @@ class MapFeature:
         :return: Jacobian of the inverse observation model :meth:`g` with respect to the observation noise :math:`J_{gv}` (see eq. :eq:`eq-Jgv`).
         """
         # TODO: To be implemented by the student
+        J = self.o2s(BxFj).J_2boxplus(xk) @ self.J_o2s(BxFj)
         return J
 
 
@@ -299,6 +321,7 @@ class Cartesian2DMapFeature(MapFeature):
 
         """
         # TODO: To be implemented by the student
+        zk , Rk = self.robot.ReadXYFeature()
         return zk, Rk
 
 

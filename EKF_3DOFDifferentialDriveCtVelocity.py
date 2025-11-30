@@ -2,6 +2,7 @@ from GFLocalization import *
 from EKF import *
 from DR_3DOFDifferentialDrive import *
 from DifferentialDriveSimulatedRobot import *
+from Feature import *
 
 class EKF_3DOFDifferentialDriveCtVelocity(GFLocalization, DR_3DOFDifferentialDrive, EKF):
 

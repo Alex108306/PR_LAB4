@@ -20,6 +20,7 @@ class DR_3DOFDifferentialDrive(Localization):
         self.wheelRadius = 0.1  # wheel radius
         self.wheelBase = 0.5  # wheel base
         self.robot.pulse_x_wheelTurns = 4096  # number of pulses per wheel turn
+        self.uk = np.zeros((3, 1))  # input vector
 
     def Localize(self, xk_1, uk):  # motion model
         """
@@ -31,7 +32,28 @@ class DR_3DOFDifferentialDrive(Localization):
         """
 
         # TODO: to be completed by the student
+        self.etak_1 = xk_1  # store previous state
+        self.uk = uk  # store input
+        angular_left_wheel = (
+            (self.uk[0][0] / self.robot.pulse_x_wheelTurns) * 2 * np.pi
+        ) / (1/self.robot.encoder_reading_frequency)
+        angular_right_wheel = (
+            (self.uk[1][0] / self.robot.pulse_x_wheelTurns) * 2 * np.pi
+        ) / (1/self.robot.encoder_reading_frequency)
+        u = (
+            angular_left_wheel * self.wheelRadius
+            + angular_right_wheel * self.wheelRadius
+        ) / 2
+        r = (
+            angular_right_wheel * self.wheelRadius
+            - angular_left_wheel * self.wheelRadius
+        ) / self.wheelBase
+        uk = np.array([[u, 0, r]]).T
 
+        # TODO: to be completed by the student
+        xk = xk_1.oplus(uk * 1/self.robot.encoder_reading_frequency)
+        xk = Pose3D(xk)
+        return xk
         pass
 
     def GetInput(self):
@@ -42,7 +64,8 @@ class DR_3DOFDifferentialDrive(Localization):
         """
 
         # TODO: to be completed by the student
-
+        uk, _ = self.robot.ReadEncoders()
+        return uk
         pass
 
 if __name__ == "__main__":

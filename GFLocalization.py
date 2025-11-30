@@ -3,6 +3,8 @@ from GaussianFilter import GaussianFilter
 import matplotlib.pyplot as plt
 from GetEllipse import GetEllipse
 import numpy as np
+
+from Pose import Pose3D
 class GFLocalization(Localization,GaussianFilter):
     """
     Map-less localization using a Gaussian filter.
@@ -82,6 +84,23 @@ class GFLocalization(Localization,GaussianFilter):
         """
 
         # TODO: To be implemented by the student
+        uk, Qk = self.GetInput()
+        if uk is None:
+            xk_bar = xk_1
+            Pk_bar = Pk_1
+            self.xk_bar = xk_bar  # store predicted state for logging
+        else:
+            xk_bar, Pk_bar = self.Prediction(uk, Qk, xk_1, Pk_1)
+            self.xk_bar = xk_bar  # store predicted state for logging
+        
+        zk, Rk, Hk, Vk = self.GetMeasurements()
+        if zk is None:
+            xk = xk_bar
+            Pk = Pk_bar
+        else:
+            xk, Pk = self.Update(zk, Rk, xk_bar, Pk_bar, Hk, Vk)
+        
+        self.PlotUncertainty(xk,Pk)
 
         return xk, Pk
 
@@ -95,17 +114,21 @@ class GFLocalization(Localization,GaussianFilter):
 
         xk_1 = x0
         Pk_1 = P0
+        xk_bar = x0
+        zk = None
 
         xsk_1 = self.robot.xsk_1
-
-        for self.k in range(self.kSteps):
+        self.kSteps +=1  # to include the last step in the loop
+        for self.k in range(1, self.kSteps):
             xsk = self.robot.fs(xsk_1, usk)  # Simulate the robot motion
             xk, Pk = self.Localize(xk_1, Pk_1)  # Localize the robot
 
             xsk_1 = xsk  # current state becomes previous state for next iteration
             xk_1 = xk
             Pk_1 = Pk
-
+            xk_bar = self.xk_bar
+            self.Log(xsk, xk, Pk, xk_bar, zk)  # log the results
+        self.PlotXY(estimation=True)  # plot the robot trajectory
         self.PlotState()  # plot the state estimation results
         plt.show()
 
@@ -175,9 +198,13 @@ class GFLocalization(Localization,GaussianFilter):
         simulation: True if the simulated XY robot trajectory is available
         '''
         fig, axs = plt.figure(), plt.axes()
-        axs.plot(self.log_xs[0, 0:self.kSteps], self.log_xs[1, 0:self.kSteps], ls='-', c='blue')
+        axs.plot(self.log_xs[0, 0:self.kSteps], self.log_xs[1, 0:self.kSteps], ls='-', c='blue', label='Ground Truth')
         if self.plot_xy_estimation:
-            axs.plot(self.log_x[0, 0:self.kSteps], self.log_x[1, 0:self.kSteps], ls='-', c='red')
+            axs.plot(self.log_x[0, 0:self.kSteps], self.log_x[1, 0:self.kSteps], ls='-', c='red', label='Estimated')
+        plt.title("Robot XY Trajectory")
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.legend()
 
     def PlotRobotUncertainty(self,xk,Pk):  # plots the robot trajectory and its uncertainty ellipse
         """

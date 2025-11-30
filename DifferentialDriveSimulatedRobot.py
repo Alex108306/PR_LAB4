@@ -57,6 +57,7 @@ class DifferentialDriveSimulatedRobot(SimulatedRobot):
         # Initialize the motion model noise
         self.Qsk = np.diag(np.array([0.1 ** 2, 0.01 ** 2, np.deg2rad(1) ** 2]))  # simulated acceleration noise
         self.usk = np.zeros((3, 1))  # simulated input to the motion model
+        self.K = np.diag(np.array([0.2, 0.2, 0.2]))  # K parameters of the motion model
 
         # Inititalize the robot parameters
         self.wheelBase = 0.5  # distance between the wheels
@@ -73,8 +74,9 @@ class DifferentialDriveSimulatedRobot(SimulatedRobot):
 
         self.xy_feature_reading_frequency = 50  # frequency of XY feature readings
         self.xy_max_range = 50  # maximum XY range, used to simulate the field of view
+        self.Rxy = np.diag(np.array([0.5 ** 2, 1 ** 2])) # Covariance of XY feature readings
 
-        self.yaw_reading_frequency = 10  # frequency of Yasw readings
+        self.yaw_reading_frequency = 10000000000  # frequency of Yaw readings
         self.v_yaw_std = np.deg2rad(5)  # std deviation of simulated heading noise
 
     def fs(self, xsk_1, usk):  # input velocity motion model with velocity noise
@@ -108,6 +110,31 @@ class DifferentialDriveSimulatedRobot(SimulatedRobot):
         """
 
         # TODO: to be completed by the student
+        nu_sk_1 = Pose3D(xsk_1[0:3])
+        v_sk_1 = Pose3D(xsk_1[3:6])
+        v_d = usk  # usk = [ud, 0, rd]
+        wsk = np.random.normal(
+            np.zeros(shape=[3, 1]), np.array([np.sqrt(self.Qsk.diagonal())]).T
+        )
+        self.xsk = np.concatenate(
+            (
+                nu_sk_1.oplus(v_sk_1 * self.dt + (1 / 2 * wsk * self.dt**2)),
+                v_sk_1 + self.K @ (v_d - v_sk_1) + wsk * self.dt,
+            ),
+            axis=0,
+        )
+
+        if self.k % self.visualizationInterval == 0:
+            self.PlotRobot()
+            self.xTraj.append(self.xsk[0, 0])
+            self.yTraj.append(self.xsk[1, 0])
+            self.trajectory.pop(0).remove()
+            self.trajectory = plt.plot(
+                self.xTraj, self.yTraj, marker=".", color="orange", markersize=1
+            )
+
+        self.k += 1
+        return self.xsk
 
         pass
 
@@ -120,6 +147,19 @@ class DifferentialDriveSimulatedRobot(SimulatedRobot):
         """
 
         # TODO: to be completed by the student
+        if self.k % self.encoder_reading_frequency != 0:
+            return None, None
+        else:
+            x, y, theta, u, v, r = self.xsk
+            omega_right = ((2 * u) + r * self.wheelBase)/(2 * self.wheelRadius)
+            omega_left = ((2 * u) - r * self.wheelBase)/(2 * self.wheelRadius)
+            angular_rotate_right_wheel = omega_right * self.dt * self.encoder_reading_frequency
+            angular_rotate_left_wheel = omega_left * self.dt * self.encoder_reading_frequency
+            pulse_right_wheel = self.pulse_x_wheelTurns * (angular_rotate_right_wheel/(2*pi))
+            pulse_left_wheel = self.pulse_x_wheelTurns * (angular_rotate_left_wheel/(2*pi))
+            zk = np.array([[pulse_left_wheel[0]], [pulse_right_wheel[0]]]) + np.random.normal(np.zeros(shape=(2,1)), np.array([np.sqrt(self.Re.diagonal())]).T)
+            Rsk = self.Re
+            return zk, Rsk
 
         pass
 
@@ -130,8 +170,32 @@ class DifferentialDriveSimulatedRobot(SimulatedRobot):
         """
 
         # TODO: to be completed by the student
+        if self.k % self.yaw_reading_frequency != 0:
+            return None, None
+        else:
+            x, y, theta, u, v, r = self.xsk
+            yaw = theta + np.random.normal(0, self.v_yaw_std)
+            R_yaw = self.v_yaw_std ** 2
+            return yaw, R_yaw
 
         pass
+
+    def ReadXYFeature(self):
+        if self.k % self.xy_feature_reading_frequency != 0:
+            return [], []
+        else:
+            xy_feature_list = []
+            R_xy_feature_list = []
+            x, y, theta, u, v, r = self.xsk
+            pose_robot = Pose3D(np.array([[x[0]], [y[0]], [theta[0]]]))
+            for feature in self.M:
+                if(np.sqrt(np.square(x-feature[0]) + np.square(y-feature[1])) <= self.xy_max_range):
+                    xy_feature = feature.boxplus(pose_robot.ominus()) + np.random.normal(np.zeros(shape=(2,1)), np.array([np.sqrt(self.Rxy.diagonal())]).T)
+                    Rxy = self.Rxy
+                    xy_feature_list.append(xy_feature)
+                    R_xy_feature_list.append(Rxy)
+
+            return xy_feature_list, R_xy_feature_list
 
     def PlotRobot(self):
         """ Updates the plot of the robot at the current pose """
